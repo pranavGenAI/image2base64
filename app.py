@@ -4,31 +4,33 @@ import gzip
 from io import BytesIO
 from PIL import Image
 
-# Custom styling
-st.markdown("""
-    <style>
-        .main {background-color: #f0f2f6;}
-        .stButton>button {background-color: #4CAF50; color: white; font-weight: bold; border-radius: 8px; padding: 10px 24px;}
-        .stTextArea>div>textarea {font-family: monospace;}
-    </style>
-""", unsafe_allow_html=True)
+def resize_image(image, max_width=800):
+    width, height = image.size
+    if width > max_width:
+        ratio = max_width / width
+        new_height = int(height * ratio)
+        return image.resize((max_width, new_height))
+    return image
 
 def compress_image(image):
-    # Convert image to bytes
+    # Resize the image for optimal size reduction
+    resized_image = resize_image(image)
+
+    # Convert image to bytes in WEBP format for better compression
     img_bytes = BytesIO()
-    image.save(img_bytes, format='PNG')  # Use PNG for lossless compression
+    resized_image.save(img_bytes, format='WEBP', quality=75)
     img_data = img_bytes.getvalue()
 
     # Compress the image data
-    compressed_data = gzip.compress(img_data)
+    compressed_data = gzip.compress(img_data, compresslevel=9)
 
-    # Encode compressed data in Base64
-    base64_str = base64.b64encode(compressed_data).decode('utf-8')
-    return base64_str
+    # Encode compressed data in Base85 for better size reduction than Base64
+    base85_str = base64.b85encode(compressed_data).decode('utf-8')
+    return base85_str
 
 # Streamlit UI
-st.title(":camera: Image to Compressed Base64 Converter")
-st.markdown("Upload your image to generate a minimized Base64 string.")
+st.title(":camera: Image to Optimized Base85 Converter")
+st.markdown("Upload your image to generate a minimized Base85 string.")
 
 uploaded_file = st.file_uploader("📂 Upload an Image", type=["png", "jpg", "jpeg"])
 
@@ -37,12 +39,12 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption='📸 Uploaded Image', use_column_width=True)
 
-    # Generate compressed Base64 string
-    base64_str = compress_image(image)
+    # Generate compressed Base85 string
+    base85_str = compress_image(image)
 
-    # Display the Base64 string with a copy button
-    st.text_area("📝 Compressed Base64 String", base64_str, height=200)
+    # Display the Base85 string with a copy button
+    st.text_area("📝 Optimized Base85 String", base85_str, height=200)
 
-    # Option to download the Base64 string as a text file
-    b64_bytes = base64_str.encode('utf-8')
-    st.download_button("⬇️ Download Base64 String", data=b64_bytes, file_name="compressed_base64.txt")
+    # Option to download the Base85 string as a text file
+    b85_bytes = base85_str.encode('utf-8')
+    st.download_button("⬇️ Download Base85 String", data=b85_bytes, file_name="compressed_base85.txt")
